@@ -145,7 +145,7 @@ document.getElementById("main").onclick = () => {
         document.getElementById("main").classList.add("active");
         document.getElementById("voters").classList.add("inactive");
         document.getElementById("voters").classList.remove("active");
-         document.getElementById("future").classList.add("inactive");
+        document.getElementById("future").classList.add("inactive");
         document.getElementById("future").classList.remove("active");
         document.getElementById("main").classList.remove("inactive");
     }
