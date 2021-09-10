@@ -69,10 +69,7 @@ def select_db(comment_id, fields, db=None):
     if db is None:
         with open(SAVED_COMMANDS_FILE, 'r') as f:
             db = json.load(f)
-    data = {}
-    for field in fields:
-        data[field] = db[comment_id][field]
-    return data
+    return {field: db[comment_id][field] for field in fields}
 
 
 def get_last_ran(db=None):
@@ -127,13 +124,8 @@ def insert_or_update(api, comment_id, issue_id, comment_txt):
 
 
 def has_enough_votes(votes):
-    # At least one negative vote will cause vote to not pass
-    for user, vote in votes.items():
-        if vote < 0:
             # __log.debug("vote less than one")
-            return False
-
-    return True
+    return all(vote >= 0 for user, vote in votes.items())
 
 
 def post_command_status_update(api, issue_id, comment_id, has_votes):
@@ -174,11 +166,7 @@ def can_run_vote_command(api, comment_id):
         return False
 
     time_left = comment_data["time_remaining"]
-    if time_left > 0:
-        # __log.debug("Time remaining: " + gh.misc.seconds_to_human(time_left))
-        return False
-
-    return True
+    return time_left <= 0
 
 
 def update_command_ran(api, comment_id, text):
@@ -191,10 +179,12 @@ def update_command_ran(api, comment_id, text):
 
 
 def get_command_votes(api, urn, comment_id):
-    votes = {}
-    for voter, vote in gh.voting.get_comment_reaction_votes(api, urn, comment_id):
-        votes[voter] = vote
-    return votes
+    return {
+        voter: vote
+        for voter, vote in gh.voting.get_comment_reaction_votes(
+            api, urn, comment_id
+        )
+    }
 
 
 def handle_vote_command(api, command, issue_id, comment_id, votes):
@@ -209,9 +199,6 @@ def handle_vote_command(api, command, issue_id, comment_id, votes):
         elif sub_command == "reopen":
             gh.issues.open_issue(api, settings.URN, issue_id)
             gh.comments.leave_issue_reopened_comment(api, settings.URN, issue_id)
-        else:
-            # Implement other commands
-            pass
     else:
         log_warning = True
 
@@ -245,7 +232,7 @@ def handle_comment(api, issue_comment):
 
             update_command_ran(api, global_comment_id, "Command Ran")
 
-        elif can_run and not has_votes:
+        elif can_run:
             # oops we didn't pass
             update_command_ran(api, global_comment_id, "Vote Failed")
 
@@ -273,10 +260,7 @@ def is_command(comment):
                 sub_cmd = sub_cmd_with_args[0]
 
                 # Check cond 2
-                if sub_cmd in subcommands:
-                    is_cmd = True
-                else:
-                    is_cmd = False
+                is_cmd = sub_cmd in subcommands
             else:
                 # Cond 3
                 is_cmd = False

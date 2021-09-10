@@ -7,15 +7,13 @@ from requests import HTTPError
 def close_issue(api, urn, issue_id):
     path = "/repos/{urn}/issues/{issue}".format(urn=urn, issue=issue_id)
     data = {"state": "closed"}
-    resp = api("PATCH", path, json=data)
-    return resp
+    return api("PATCH", path, json=data)
 
 
 def open_issue(api, urn, issue_id):
     path = "/repos/{urn}/issues/{issue}".format(urn=urn, issue=issue_id)
     data = {"state": "open"}
-    resp = api("PATCH", path, json=data)
-    return resp
+    return api("PATCH", path, json=data)
 
 
 def get_oldest_open_issues(api, urn):
@@ -25,15 +23,13 @@ def get_oldest_open_issues(api, urn):
             "sort": "updated",
             "direction": "asc",
             }
-    resp = api("get", path, params=data)
-    return resp
+    return api("get", path, params=data)
 
 
 def get_issue_comment_last_updated(api, urn, comment):
     path = "/repos/{urn}/issues/comments/{comment}".format(urn=urn, comment=comment)
     comment = api("get", path)
-    updated = arrow.get(comment["updated_at"])
-    return updated
+    return arrow.get(comment["updated_at"])
 
 
 def voting_window_remaining_seconds(api, urn, comment, window):
@@ -63,8 +59,7 @@ def create_issue(api, urn, title, body, labels):
             "body": body,
             "labels": labels,
             }
-    resp = api("post", path, json=data)
-    return resp
+    return api("post", path, json=data)
 
 
 def label_issue(api, urn, number, labels):

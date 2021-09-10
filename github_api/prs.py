@@ -74,10 +74,7 @@ Description:
     except HTTPError as e:
         resp = e.response
         # could not be merged
-        if resp.status_code == 405:
-            raise exc.CouldntMerge
-        # someone trying to be sneaky and change their PR commits during voting
-        elif resp.status_code == 409:
+        if resp.status_code in [405, 409]:
             raise exc.CouldntMerge
         else:
             raise
@@ -158,7 +155,7 @@ def get_pr_last_updated(api, pr_data):
     events = list(filter(lambda e: '/'.join(e["payload"]["ref"].split("/")[3:]) == pr_ref,
                          events))
 
-    if len(events) == 0:
+    if not events:
         # if we can't get good data, fall back to repo push time
         repo = pr_data["head"]["repo"]
         if repo:
@@ -181,8 +178,7 @@ def get_pr_comments(api, urn, pr_num):
     }
     path = "/repos/{urn}/issues/{pr}/comments".format(urn=urn, pr=pr_num)
     comments = api("get", path, params=params)
-    for comment in comments:
-        yield comment
+    yield from comments
 
 
 def get_commit_statuses(api, urn, ref):
@@ -205,11 +201,8 @@ def has_build_failed(api, urn, ref):
     """
     statuses = get_commit_statuses(api, urn, ref)
 
-    for status in statuses:
-        if status["state"] in ["failure", "pending"] and \
-           status["context"].startswith(TRAVIS_CI_CONTEXT):
-            return True
-    return False
+    return any(status["state"] in ["failure", "pending"] and \
+           status["context"].startswith(TRAVIS_CI_CONTEXT) for status in statuses)
 
 
 def has_build_passed(api, urn, ref):
@@ -219,10 +212,11 @@ def has_build_passed(api, urn, ref):
     """
     statuses = get_commit_statuses(api, urn, ref)
 
-    for status in statuses:
-        if status["state"] == "success" and status["context"].startswith(TRAVIS_CI_CONTEXT):
-            return True
-    return False
+    return any(
+        status["state"] == "success"
+        and status["context"].startswith(TRAVIS_CI_CONTEXT)
+        for status in statuses
+    )
 
 
 def get_ready_prs(api, urn, window):
@@ -291,8 +285,7 @@ def get_pr_reviews(api, urn, pr_num):
         "per_page": settings.DEFAULT_PAGINATION
     }
     path = "/repos/{urn}/pulls/{pr}/reviews".format(urn=urn, pr=pr_num)
-    data = api("get", path, params=params)
-    return data
+    return api("get", path, params=params)
 
 
 def get_is_mergeable(api, urn, pr_num):
@@ -304,8 +297,7 @@ def get_pr(api, urn, pr_num):
     not exist on prs that come back from paginated endpoints, so we must fetch
     the pr directly """
     path = "/repos/{urn}/pulls/{pr}".format(urn=urn, pr=pr_num)
-    pr = api("get", path)
-    return pr
+    return api("get", path)
 
 
 def get_open_prs(api, urn):
@@ -316,16 +308,14 @@ def get_open_prs(api, urn):
         "per_page": settings.DEFAULT_PAGINATION,
     }
     path = "/repos/{urn}/pulls".format(urn=urn)
-    data = api("get", path, params=params)
-    return data
+    return api("get", path, params=params)
 
 
 def get_reactions_for_pr(api, urn, pr):
     path = "/repos/{urn}/issues/{pr}/reactions".format(urn=urn, pr=pr)
     params = {"per_page": settings.DEFAULT_PAGINATION}
     reactions = api("get", path, params=params)
-    for reaction in reactions:
-        yield reaction
+    yield from reactions
 
 
 def get_patch(api, urn, pr_num, raw=False):

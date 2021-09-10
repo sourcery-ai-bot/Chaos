@@ -31,9 +31,7 @@ def get_all_issue_comments(api, urn, page=1, since=None):
     comments = api("get", path, json=data, params=params)
     for comment in comments:
         # Return issue_id, global_comment_id, comment_text
-        issue_comment = {}
-        # "https://github.com/octocat/Hello-World/issues/1347#issuecomment-1"
-        issue_comment["issue_id"] = comment["html_url"].split("/")[-1].split("#")[0]
+        issue_comment = {'issue_id': comment["html_url"].split("/")[-1].split("#")[0]}
         # I believe this is the right one... Could also be issue specific comment id
         issue_comment["global_comment_id"] = comment["id"]
         issue_comment["comment_text"] = comment["body"]
@@ -51,8 +49,7 @@ def get_reactions_for_comment(api, urn, comment_id):
     except:
         pass
 
-    for reaction in reactions:
-        yield reaction
+    yield from reactions
 
 
 def leave_reject_comment(api, urn, pr, votes, total, threshold, meritocracy_satisfied):
@@ -115,12 +112,10 @@ def leave_issue_reopened_comment(api, urn, issue):
 def leave_comment(api, urn, pr, body):
     path = "/repos/{urn}/issues/{pr}/comments".format(urn=urn, pr=pr)
     data = {"body": body}
-    resp = api("post", path, json=data)
-    return resp
+    return api("post", path, json=data)
 
 
 def edit_comment(api, urn, comment_id, body):
     path = "/repos/{urn}/issues/comments/{id}".format(urn=urn, id=comment_id)
     data = {"body": body}
-    resp = api("patch", path, json=data)
-    return resp
+    return api("patch", path, json=data)

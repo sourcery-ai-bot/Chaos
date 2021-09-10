@@ -17,24 +17,27 @@ def get_votes(api, urn, pr, meritocracy):
     comments/reactions come *after* the last update to the pr, so that someone
     can't acquire approval votes, then change the pr """
 
-    votes = {}
-    meritocracy_satisfied = False
     pr_owner = pr["user"]["login"]
     pr_num = pr["number"]
 
-    # get all the comment-and-reaction-based votes
-    for voter, vote in get_pr_comment_votes_all(api, urn, pr_num):
-        votes[voter] = vote
+    votes = {
+        voter: vote
+        for voter, vote in get_pr_comment_votes_all(api, urn, pr_num)
+    }
 
     # get all the pr review reactions
     # turn it into a dict to sort out duplicates (last value wins)
     reviews = get_pr_review_reactions(api, urn, pr)
     reviews = {user: (is_current, vote) for user, is_current, vote in reviews}
-    for vote_owner, (is_current, vote) in reviews.items():
-        if (vote > 0 and is_current and vote_owner != pr_owner
-                and vote_owner.lower() in meritocracy):
-            meritocracy_satisfied = True
-            break
+    meritocracy_satisfied = any(
+        (
+            vote > 0
+            and is_current
+            and vote_owner != pr_owner
+            and vote_owner.lower() in meritocracy
+        )
+        for vote_owner, (is_current, vote) in reviews.items()
+    )
 
     # by virtue of creating the PR, the owner defaults to a vote of 1
     if votes.get(pr_owner) != -1:
@@ -74,8 +77,7 @@ def get_pr_comment_votes_all(api, urn, pr_num):
     # looks like a comment, complete with reactions, so let's treat it like a
     # comment
     reaction_votes = get_pr_reaction_votes(api, urn, pr_num)
-    for reaction_owner, vote in reaction_votes:
-        yield reaction_owner, vote
+    yield from reaction_votes
 
 
 def get_pr_reaction_votes(api, urn, pr_num):
@@ -152,8 +154,7 @@ def get_approval_threshold(api, urn):
     """ the weighted vote total that must be reached for a PR to be approved
     and merged """
     num_watchers = repos.get_num_watchers(api, urn)
-    threshold = max(1, settings.MIN_VOTE_WATCHERS * num_watchers)
-    return threshold
+    return max(1, settings.MIN_VOTE_WATCHERS * num_watchers)
 
 
 def parse_review_for_vote(state):
@@ -198,8 +199,7 @@ def friendly_voting_record(votes):
     """ returns a sorted list (a string list, not datatype list) of voters and
     their raw (unweighted) vote.  this is used in merge commit messages """
     voters = sorted(votes.items())
-    record = "\n".join("@%s: %d" % (user, vote) for user, vote in voters)
-    return record
+    return "\n".join("@%s: %d" % (user, vote) for user, vote in voters)
 
 
 def get_initial_voting_window():
@@ -218,6 +218,4 @@ def get_extended_voting_window(api, urn):
 
     minimum_window = settings.DEFAULT_VOTE_WINDOW
     maximum_window = settings.EXTENDED_VOTE_WINDOW
-    seconds = dynamic_voting_window(days, minimum_window, maximum_window) * 60 * 60
-
-    return seconds
+    return dynamic_voting_window(days, minimum_window, maximum_window) * 60 * 60

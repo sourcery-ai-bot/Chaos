@@ -134,13 +134,13 @@ class TestPRMethods(unittest.TestCase):
         master_build_status = True
 
         def get_is_mergeable_side_effect(api, urn, pr_num):
-            return False if pr_num in [13, 14] else True
+            return pr_num not in [13, 14]
 
         def has_build_passed_side_effect(api, urn, ref):
             return master_build_status
 
         def has_build_failed_side_effect(api, urn, ref):
-            return True if "15" in ref else False
+            return "15" in ref
 
         mock_get_is_mergeable.side_effect = get_is_mergeable_side_effect
         mock_has_build_passed.side_effect = has_build_passed_side_effect

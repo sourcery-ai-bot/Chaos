@@ -36,8 +36,7 @@ class Mysql(interface.AbstractAdapter):
 
         with self.conn.cursor() as cur:
             cur.execute(query, params)
-            results = cur.fetchall()
-            return results
+            return cur.fetchall()
 
     def row(self, query, params=()):
         return self.query(query, params)[0]
